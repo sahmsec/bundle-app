@@ -7,6 +7,7 @@ import { getShop } from "../services/shop.server";
 import { getAnalyticsOverview } from "../services/analytics.server";
 import { MetricCard } from "../features/dashboard/components/MetricCard";
 import { RevenueChart } from "../features/analytics/components/RevenueChart";
+import { EmptyState } from "../components/EmptyState";
 import { formatMoney, formatNumber } from "../utils/format";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -32,9 +33,24 @@ export default function Analytics() {
             gap: "1rem",
           }}
         >
-          <MetricCard label="Revenue" value={formatMoney(totalRevenue, currencyCode)} />
-          <MetricCard label="Orders" value={formatNumber(totalOrders)} />
-          <MetricCard label="Units sold" value={formatNumber(totalUnits)} />
+          <MetricCard
+            icon="cash-dollar"
+            tone="success"
+            label="Revenue"
+            value={formatMoney(totalRevenue, currencyCode)}
+          />
+          <MetricCard
+            icon="order"
+            tone="info"
+            label="Orders"
+            value={formatNumber(totalOrders)}
+          />
+          <MetricCard
+            icon="package"
+            tone="neutral"
+            label="Units sold"
+            value={formatNumber(totalUnits)}
+          />
         </div>
       </s-section>
 
@@ -42,10 +58,11 @@ export default function Analytics() {
         {hasData ? (
           <RevenueChart series={series} />
         ) : (
-          <s-paragraph>
-            No bundle sales yet. Once orders containing your bundles come in,
-            revenue will appear here.
-          </s-paragraph>
+          <EmptyState
+            icon="chart-line"
+            heading="No sales yet"
+            description="When an order containing one of your bundles comes in, revenue and trends will show up here."
+          />
         )}
       </s-section>
 

@@ -14,6 +14,7 @@ import { listBundles } from "../services/bundle.server";
 import { toBundleListItem } from "../utils/bundle-dto";
 import { BUNDLE_STATUSES } from "../services/bundle.schema";
 import { BundleStatusBadge } from "../features/bundles/components/BundleStatusBadge";
+import { EmptyState } from "../components/EmptyState";
 import { formatDate, formatMoney, formatNumber } from "../utils/format";
 import type { BundleListItem } from "../types/bundle";
 
@@ -133,26 +134,27 @@ export default function BundlesList() {
         {isLoading && <s-spinner accessibilityLabel="Loading bundles" />}
 
         {!isLoading && total === 0 && !hasFilters && (
-          <s-stack direction="block" gap="base">
-            <s-paragraph>
-              You haven&apos;t created any bundles yet. Create one to start selling
-              products together.
-            </s-paragraph>
-            <s-stack direction="inline" gap="base">
+          <EmptyState
+            icon="package"
+            heading="No bundles yet"
+            description="Create your first bundle to start selling products together at a special price."
+            action={
               <s-button variant="primary" onClick={() => navigate("/app/bundles/new")}>
                 Create bundle
               </s-button>
-            </s-stack>
-          </s-stack>
+            }
+          />
         )}
 
         {!isLoading && total === 0 && hasFilters && (
-          <s-stack direction="block" gap="base">
-            <s-paragraph>No bundles match your filters.</s-paragraph>
-            <s-stack direction="inline" gap="base">
+          <EmptyState
+            icon="search"
+            heading="No matches"
+            description="No bundles match your current filters."
+            action={
               <s-button onClick={() => navigate("/app/bundles")}>Clear filters</s-button>
-            </s-stack>
-          </s-stack>
+            }
+          />
         )}
 
         {!isLoading && total > 0 && (
