@@ -1,0 +1,45 @@
+{%- comment -%}
+  Bundle widget (app block) — add to a product template via the theme editor.
+  Renders a container; bundle-widget.js fetches live bundle data for the current
+  product from the app proxy (/apps/bundle-data) and populates it. Hidden when
+  the product belongs to no active bundle.
+{%- endcomment -%}
+
+<div
+  class="bundle-widget"
+  data-bundle-widget
+  data-product-id="{{ product.id }}"
+  data-proxy-base="/apps/bundle-data"
+  data-show-savings="{{ block.settings.show_savings }}"
+>
+  {%- if block.settings.heading != blank -%}
+    <h2 class="bundle-widget__heading">{{ block.settings.heading }}</h2>
+  {%- endif -%}
+  <div class="bundle-widget__content" data-bundle-widget-content>
+    <p class="bundle-widget__loading">{{ 'bundle.loading' | t }}</p>
+  </div>
+</div>
+
+{{ 'bundle-widget.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'bundle-widget.js' | asset_url }}" defer></script>
+
+{% schema %}
+{
+  "name": "Bundle widget",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Frequently bought together"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_savings",
+      "label": "Show savings badge",
+      "default": true
+    }
+  ]
+}
+{% endschema %}

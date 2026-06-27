@@ -1,0 +1,9 @@
+# Theme App Extension — the storefront surface. Deploys to Shopify's CDN and is
+# added by the merchant in the theme editor. Separate runtime from the admin app.
+api_version = "2025-10"
+
+[[extensions]]
+name = "Bundle storefront"
+handle = "bundle-storefront"
+uid = "dbadb0bc-1215-e0b1-5f07-2b9265aca017c9aa5dde"
+type = "theme"

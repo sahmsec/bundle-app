@@ -1,0 +1,317 @@
+// =============================================================================
+// Shopify Bundle App — Prisma schema (Phase 2)
+//
+// Source of truth for all merchant-facing data. The runtime checkout config
+// (consumed by the Cart Transform Function) is PROJECTED from these tables
+// into Shopify metafields — the Function cannot read this database directly.
+//
+// Provider: PostgreSQL everywhere (incl. local via Docker). We deliberately do
+// NOT use SQLite locally — enums, Decimal, Json and case-insensitivity behave
+// differently and cause schema drift between dev and prod. See PHASE 2 notes.
+// =============================================================================
+
+generator client {
+  // We stay on prisma-client-js: it is the most widely-deployed generator and
+  // the one the official Shopify React Router template ships with. The newer
+  // ESM-first `prisma-client` generator becomes the default in Prisma 7 — plan
+  // to migrate to it then (low risk; requires an `output` path). See PHASE 2 R2.
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// AUTH / SESSIONS
+// Shape required by @shopify/shopify-app-session-storage-prisma. Do not rename
+// these fields — the adapter maps to them by name.
+// -----------------------------------------------------------------------------
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+  // Required by session-storage-prisma v9 + the `expiringOfflineAccessTokens`
+  // future flag: offline tokens now expire and are silently refreshed. Omitting
+  // these columns breaks token refresh in production (merchants get logged out,
+  // webhooks lose auth). See PHASE 3.
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+
+  @@index([shop])
+}
+
+// -----------------------------------------------------------------------------
+// TENANCY
+// Shop is the tenant root. Every business table is scoped by shopId so a single
+// database safely serves 50k+ merchants. onDelete: Cascade lets shop/redact
+// (GDPR) wipe a tenant in one operation.
+// -----------------------------------------------------------------------------
+model Shop {
+  id            String    @id @default(cuid())
+  domain        String    @unique // e.g. acme.myshopify.com
+  shopifyGid    String?   @unique // gid://shopify/Shop/123
+  name          String?
+  email         String?
+  planName      String?
+  countryCode   String?
+  currencyCode  String?
+  installedAt   DateTime  @default(now())
+  uninstalledAt DateTime? // soft uninstall; data retained until shop/redact
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  settings   ShopSettings?
+  bundles    Bundle[]
+  events     BundleEvent[]
+  sales      BundleSale[]
+  dailyStats BundleDailyStat[]
+  auditLogs  AuditLog[]
+
+  @@index([uninstalledAt])
+}
+
+model ShopSettings {
+  id     String @id @default(cuid())
+  shopId String @unique
+  shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  defaultPricingType PricingType @default(PERCENTAGE_DISCOUNT)
+  defaultDiscount    Decimal     @default(0) @db.Decimal(5, 2)
+  widgetConfig       Json        @default("{}") // storefront widget styling
+  onboardingDone     Boolean     @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// BUNDLES (core domain)
+// -----------------------------------------------------------------------------
+model Bundle {
+  id     String @id @default(cuid())
+  shopId String
+  shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  title       String
+  handle      String // URL-safe; unique per shop
+  description String?
+  imageUrl    String?
+  status      BundleStatus @default(DRAFT)
+  type        BundleType   @default(FIXED)
+
+  // Pricing: pricingValue is interpreted by pricingType
+  //  PERCENTAGE_DISCOUNT -> percent off component sum (0–100)
+  //  FIXED_PRICE         -> the whole bundle costs this amount
+  //  FIXED_TOTAL         -> deduct this amount from component sum
+  pricingType  PricingType @default(PERCENTAGE_DISCOUNT)
+  pricingValue Decimal     @db.Decimal(12, 2)
+
+  // Shopify projection — written on PUBLISH, read by Function/storefront
+  shopifyProductId String? // gid://shopify/Product/... (FIXED bundles)
+  cartTransformId  String? // gid://shopify/CartTransform/...
+  syncStatus       SyncStatus @default(PENDING)
+  syncError        String?
+  lastSyncedAt     DateTime?
+
+  publishedAt DateTime?
+  deletedAt   DateTime? // soft delete — preserves analytics history
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  groups     BundleComponentGroup[]
+  components BundleComponent[]
+  events     BundleEvent[]
+  sales      BundleSale[]
+  dailyStats BundleDailyStat[]
+
+  // R1: `handle` must be unique only among LIVE bundles. A plain @@unique here
+  // would collide with soft-delete — re-creating a bundle with the handle of a
+  // previously soft-deleted one throws a constraint error. Prisma's schema DSL
+  // can't express a PARTIAL unique index, so we keep a non-unique index for
+  // lookups and add a partial unique index (WHERE "deletedAt" IS NULL) by hand
+  // in the migration SQL. See prisma/sql/0001_bundle_handle_partial_unique.sql.
+  @@index([shopId, handle])
+  @@index([shopId, status])
+  @@index([shopId, deletedAt])
+  @@index([shopifyProductId])
+}
+
+// "Pick N from this group" — only used by CUSTOMIZABLE (build-a-box) bundles.
+model BundleComponentGroup {
+  id       String @id @default(cuid())
+  bundleId String
+  bundle   Bundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+
+  title     String
+  minSelect Int    @default(1)
+  maxSelect Int    @default(1)
+  position  Int    @default(0)
+
+  components BundleComponent[]
+
+  @@index([bundleId])
+}
+
+model BundleComponent {
+  id       String  @id @default(cuid())
+  bundleId String
+  bundle   Bundle  @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  groupId  String?
+  group    BundleComponentGroup? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  productId String  // gid://shopify/Product/...
+  variantId String? // gid://shopify/ProductVariant/... (null = "any variant")
+  quantity  Int     @default(1)
+  position  Int     @default(0)
+  optional  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bundleId])
+  @@index([groupId])
+  @@index([productId])
+}
+
+// -----------------------------------------------------------------------------
+// ANALYTICS
+// Split into raw events (high volume), confirmed sales (from order webhooks),
+// and a pre-aggregated daily rollup that powers fast dashboard charts.
+// -----------------------------------------------------------------------------
+model BundleEvent {
+  id       BigInt @id @default(autoincrement())
+  shopId   String
+  shop     Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  bundleId String
+  bundle   Bundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+
+  type         EventType
+  sessionToken String? // anonymous storefront session, for funnel dedupe
+  occurredAt   DateTime  @default(now())
+
+  @@index([bundleId, occurredAt])
+  @@index([shopId, type, occurredAt])
+}
+
+model BundleSale {
+  id       BigInt @id @default(autoincrement())
+  shopId   String
+  shop     Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  bundleId String
+  bundle   Bundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+
+  orderId      String  // gid://shopify/Order/...
+  quantity     Int     @default(1)
+  revenue      Decimal @db.Decimal(12, 2)
+  currencyCode String
+  occurredAt   DateTime @default(now())
+
+  @@unique([orderId, bundleId]) // idempotent: a redelivered order webhook can't double-count
+  @@index([bundleId, occurredAt])
+  @@index([shopId, occurredAt])
+}
+
+model BundleDailyStat {
+  id       BigInt @id @default(autoincrement())
+  shopId   String
+  shop     Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  bundleId String
+  bundle   Bundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+
+  date       DateTime @db.Date
+  views      Int      @default(0)
+  addToCarts Int      @default(0)
+  orders     Int      @default(0)
+  // R3 (deferred to PHASE 9): `revenue` has no currency. With Shopify Markets a
+  // shop can sell in multiple presentment currencies; summing them here mixes
+  // currencies silently. Decide in Phase 9: store the shop's single presentment
+  // currency, or add `currencyCode` and roll up per (bundle, date, currency).
+  revenue    Decimal  @default(0) @db.Decimal(12, 2)
+
+  @@unique([bundleId, date])
+  @@index([shopId, date])
+}
+
+// -----------------------------------------------------------------------------
+// OPERATIONS
+// -----------------------------------------------------------------------------
+// Idempotency ledger: Shopify can deliver the same webhook more than once.
+// We record X-Shopify-Event-Id and short-circuit duplicates.
+// R4 (deferred to PHASE 9): this table and BundleEvent grow unbounded and will
+// become the largest/slowest tables at 50k merchants. Add a retention job —
+// e.g. prune ProcessedWebhook rows older than ~30 days (redeliveries arrive
+// within hours, so old rows are dead weight). No schema change needed now.
+model ProcessedWebhook {
+  id          String   @id // X-Shopify-Event-Id
+  topic       String
+  shopDomain  String
+  processedAt DateTime @default(now())
+
+  @@index([shopDomain])
+  @@index([processedAt]) // supports the retention/prune query (R4)
+}
+
+model AuditLog {
+  id     BigInt @id @default(autoincrement())
+  shopId String
+  shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  actor      String? // staff email or "system"
+  action     String  // e.g. BUNDLE_PUBLISHED
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([shopId, createdAt])
+}
+
+// -----------------------------------------------------------------------------
+// ENUMS
+// -----------------------------------------------------------------------------
+enum BundleStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum BundleType {
+  FIXED        // a set of specific products sold together
+  CUSTOMIZABLE // build-a-box: buyer picks from groups
+}
+
+enum PricingType {
+  PERCENTAGE_DISCOUNT
+  FIXED_PRICE
+  FIXED_TOTAL
+}
+
+enum SyncStatus {
+  PENDING
+  SYNCING
+  SYNCED
+  FAILED
+}
+
+enum EventType {
+  VIEW
+  ADD_TO_CART
+  CHECKOUT
+  PURCHASE
+}

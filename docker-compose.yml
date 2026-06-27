@@ -1,0 +1,32 @@
+# Local development database.
+# We use PostgreSQL locally (NOT SQLite) so dev matches prod exactly — enums,
+# Decimal, Json, @db.Date and case-sensitivity all behave identically. This is
+# the single biggest defense against "works locally, breaks in prod" drift.
+#
+# Usage:
+#   docker compose up -d        # start Postgres in the background
+#   docker compose down         # stop (data persists in the named volume)
+#   docker compose down -v      # stop AND wipe data (fresh start)
+services:
+  postgres:
+    image: postgres:17                      # latest stable major; pin for reproducibility
+    container_name: bundle-app-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bundle
+      POSTGRES_PASSWORD: bundle
+      POSTGRES_DB: bundle_app
+    ports:
+      # Host port is configurable (default 5432) so it won't clash with other
+      # local Postgres instances. Set DB_PORT in .env to override.
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - bundle_pgdata:/var/lib/postgresql/data
+    healthcheck:                             # lets tooling wait until the DB is actually ready
+      test: ["CMD-SHELL", "pg_isready -U bundle -d bundle_app"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  bundle_pgdata:

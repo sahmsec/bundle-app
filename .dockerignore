@@ -1,0 +1,17 @@
+node_modules
+build
+.cache
+.react-router
+.git
+.gitignore
+.github
+.env
+.env.*
+npm-debug.log*
+.shopify
+.DS_Store
+extensions/*/node_modules
+extensions/*/dist
+DEPLOYMENT.md
+README.md
+CHANGELOG.md

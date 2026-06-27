@@ -1,0 +1,29 @@
+# Input query for the Cart Transform Function.
+# Reads each cart line's variant and the bundle metafields projected onto it by
+# the publish step: the component variant references and their quantities.
+query RunInput {
+  cart {
+    lines {
+      id
+      quantity
+      merchandise {
+        __typename
+        ... on ProductVariant {
+          id
+          componentReferences: metafield(
+            namespace: "$app:bundle"
+            key: "component_references"
+          ) {
+            jsonValue
+          }
+          componentQuantities: metafield(
+            namespace: "$app:bundle"
+            key: "component_quantities"
+          ) {
+            jsonValue
+          }
+        }
+      }
+    }
+  }
+}

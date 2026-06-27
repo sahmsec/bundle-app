@@ -1,0 +1,11 @@
+# Declares the web (frontend+backend) process the Shopify CLI runs during
+# `shopify app dev`. We filled this in from the template's .liquid placeholder
+# for npm. `prisma migrate deploy` applies committed migrations before the dev
+# server boots, so the local Postgres schema is always current.
+name = "shopify-bundle-app"
+roles = ["frontend", "backend"]
+webhooks_path = "/webhooks/app/uninstalled"
+
+[commands]
+predev = "npm exec prisma generate"
+dev = "npm exec prisma migrate deploy && npm exec react-router dev"
