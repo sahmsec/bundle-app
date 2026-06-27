@@ -20,54 +20,71 @@ export default function App() {
 
   return (
     <div className={styles.page}>
-      <main className={styles.card}>
+      <header className={styles.nav}>
         <div className={styles.brand}>
-          <span className={styles.logo} aria-hidden="true">📦</span>
-          <span className={styles.brandName}>Bundle Builder</span>
+          <span className={styles.mark} aria-hidden="true">B</span>
+          <span className={styles.brandName}>Bundle&nbsp;Builder</span>
         </div>
+        <nav className={styles.navRight}>
+          <span className={styles.navTag}>PRODUCT&nbsp;BUNDLES</span>
+          <a className={styles.navLink} href="#install">
+            Open app →
+          </a>
+        </nav>
+      </header>
 
-        <h1 className={styles.heading}>Sell more with product bundles</h1>
+      <main className={styles.hero}>
+        <p className={styles.eyebrow}>Bundling — built for Shopify</p>
+
+        <h1 className={styles.headline}>
+          Sell more,
+          <br />
+          <span className={styles.accent}>bundled.</span>
+        </h1>
+
         <p className={styles.subhead}>
-          Group products together, set a discount, and let Shopify handle pricing
-          at checkout — bundles that just work, no theme code required.
+          Group products, set a discount, and let Shopify price the bundle right
+          at checkout. No theme code. No headaches.
         </p>
 
         {showForm && (
-          <Form className={styles.form} method="post" action="/auth/login">
-            <label className={styles.label} htmlFor="shop">
-              Shop domain
-            </label>
-            <div className={styles.inputRow}>
-              <input
-                id="shop"
-                className={styles.input}
-                type="text"
-                name="shop"
-                placeholder="my-store.myshopify.com"
-                autoComplete="off"
-              />
-              <button className={styles.button} type="submit">
-                Log in
-              </button>
-            </div>
-            <span className={styles.hint}>
-              Enter your store to install or open the app.
-            </span>
+          <Form
+            id="install"
+            className={styles.install}
+            method="post"
+            action="/auth/login"
+          >
+            <input
+              className={styles.input}
+              type="text"
+              name="shop"
+              placeholder="your-store.myshopify.com"
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <button className={styles.button} type="submit">
+              Open
+            </button>
           </Form>
         )}
 
+        <p className={styles.micro}>
+          One-click install <span className={styles.dot}>·</span> free forever{" "}
+          <span className={styles.dot}>·</span> uninstall anytime
+        </p>
+
         <ul className={styles.features}>
           <li>
-            <strong>Fast setup.</strong> Build a bundle and pick products in
-            minutes.
+            <span className={styles.featNum}>01</span> Build a bundle &amp; pick
+            products in minutes
           </li>
           <li>
-            <strong>Automatic discounts.</strong> Shopify groups and prices
-            bundles natively at checkout.
+            <span className={styles.featNum}>02</span> Discounts apply
+            automatically at checkout
           </li>
           <li>
-            <strong>Built-in analytics.</strong> Track revenue, orders, and views
-            per bundle.
+            <span className={styles.featNum}>03</span> Track revenue &amp; views
+            per bundle
           </li>
         </ul>
       </main>
