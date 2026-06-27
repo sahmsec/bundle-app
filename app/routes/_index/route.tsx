@@ -19,39 +19,58 @@ export default function App() {
   const { showForm } = useLoaderData<typeof loader>();
 
   return (
-    <div className={styles.index}>
-      <div className={styles.content}>
-        <h1 className={styles.heading}>A short heading about [your app]</h1>
-        <p className={styles.text}>
-          A tagline about [your app] that describes your value proposition.
+    <div className={styles.page}>
+      <main className={styles.card}>
+        <div className={styles.brand}>
+          <span className={styles.logo} aria-hidden="true">📦</span>
+          <span className={styles.brandName}>Bundle Builder</span>
+        </div>
+
+        <h1 className={styles.heading}>Sell more with product bundles</h1>
+        <p className={styles.subhead}>
+          Group products together, set a discount, and let Shopify handle pricing
+          at checkout — bundles that just work, no theme code required.
         </p>
+
         {showForm && (
           <Form className={styles.form} method="post" action="/auth/login">
-            <label className={styles.label}>
-              <span>Shop domain</span>
-              <input className={styles.input} type="text" name="shop" />
-              <span>e.g: my-shop-domain.myshopify.com</span>
+            <label className={styles.label} htmlFor="shop">
+              Shop domain
             </label>
-            <button className={styles.button} type="submit">
-              Log in
-            </button>
+            <div className={styles.inputRow}>
+              <input
+                id="shop"
+                className={styles.input}
+                type="text"
+                name="shop"
+                placeholder="my-store.myshopify.com"
+                autoComplete="off"
+              />
+              <button className={styles.button} type="submit">
+                Log in
+              </button>
+            </div>
+            <span className={styles.hint}>
+              Enter your store to install or open the app.
+            </span>
           </Form>
         )}
-        <ul className={styles.list}>
+
+        <ul className={styles.features}>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Fast setup.</strong> Build a bundle and pick products in
+            minutes.
           </li>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Automatic discounts.</strong> Shopify groups and prices
+            bundles natively at checkout.
           </li>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Built-in analytics.</strong> Track revenue, orders, and views
+            per bundle.
           </li>
         </ul>
-      </div>
+      </main>
     </div>
   );
 }

@@ -1,73 +1,169 @@
-.index {
-  align-items: center;
+.page {
+  min-height: 100vh;
   display: flex;
+  align-items: center;
   justify-content: center;
-  height: 100%;
+  padding: 2rem 1.25rem;
+  background: radial-gradient(
+    1200px 600px at 50% -10%,
+    #e8f5ee 0%,
+    #f7faf8 45%,
+    #ffffff 100%
+  );
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  color: #16241d;
+}
+
+.card {
   width: 100%;
+  max-width: 560px;
+  background: #ffffff;
+  border: 1px solid #e6ebe8;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(16, 40, 28, 0.08);
+  padding: 2.5rem 2.25rem;
   text-align: center;
-  padding: 1rem;
 }
 
-.heading,
-.text {
-  padding: 0;
-  margin: 0;
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
 }
 
-.text {
-  font-size: 1.2rem;
-  padding-bottom: 2rem;
+.logo {
+  font-size: 1.5rem;
 }
 
-.content {
-  display: grid;
-  gap: 2rem;
+.brandName {
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.heading {
+  font-size: 2rem;
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.75rem;
+}
+
+.subhead {
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: #5b6b63;
+  margin: 0 auto 2rem;
+  max-width: 440px;
 }
 
 .form {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  margin: 0 auto;
-  gap: 1rem;
+  display: block;
+  text-align: left;
+  max-width: 420px;
+  margin: 0 auto 2rem;
 }
 
 .label {
-  display: grid;
-  gap: 0.2rem;
-  max-width: 20rem;
-  text-align: left;
-  font-size: 1rem;
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  color: #16241d;
+}
+
+.inputRow {
+  display: flex;
+  gap: 0.5rem;
 }
 
 .input {
-  padding: 0.4rem;
+  flex: 1;
+  min-width: 0;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #cdd6d1;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.input:focus {
+  border-color: #0f7d4d;
+  box-shadow: 0 0 0 3px rgba(15, 125, 77, 0.15);
 }
 
 .button {
-  padding: 0.4rem;
+  padding: 0.7rem 1.25rem;
+  background: #0f7d4d;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
 }
 
-.list {
+.button:hover {
+  background: #0c6840;
+}
+
+.hint {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #8a978f;
+}
+
+.features {
   list-style: none;
-  padding: 0;
-  padding-top: 3rem;
+  padding: 1.75rem 0 0;
   margin: 0;
-  display: flex;
-  gap: 2rem;
-}
-
-.list > li {
-  max-width: 20rem;
+  border-top: 1px solid #eef2f0;
+  display: grid;
+  gap: 0.9rem;
   text-align: left;
 }
 
-@media only screen and (max-width: 50rem) {
-  .list {
-    display: block;
+.features > li {
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: #4a5a52;
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.features > li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: #0f7d4d;
+  font-weight: 700;
+}
+
+.features strong {
+  color: #16241d;
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 2rem 1.25rem;
   }
 
-  .list > li {
-    padding-bottom: 1rem;
+  .heading {
+    font-size: 1.6rem;
+  }
+
+  .inputRow {
+    flex-direction: column;
+  }
+
+  .button {
+    width: 100%;
   }
 }

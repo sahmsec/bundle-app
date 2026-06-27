@@ -2,15 +2,15 @@
 
 client_id = "704154c8a1881ae3cc79c87023d502ac"
 name = "Bundle Builder"
-application_url = "https://shopify.dev/apps/default-app-home"
+application_url = "https://bundle-app-in0h.onrender.com"
 embedded = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_products,write_products,read_orders"
+scopes = "read_products,write_products"
 
 [app_proxy]
-url = "https://example.com/proxy"
+url = "https://bundle-app-in0h.onrender.com/proxy"
 subpath = "bundle-data"
 prefix = "apps"
 
@@ -47,8 +47,7 @@ api_version = "2026-07"
   # compliance_topics = [ "shop/redact" ]
 
 [auth]
-redirect_urls = [ "https://shopify.dev/apps/default-app-home/api/auth" ]
+redirect_urls = [ "https://bundle-app-in0h.onrender.com/auth/callback" ]
 
 [build]
-include_config_on_deploy = true
 automatically_update_urls_on_dev = true
