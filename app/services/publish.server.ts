@@ -59,9 +59,82 @@ const COMPONENT_PRICES = `#graphql
     }
   }`;
 
+const COMPONENT_OPTIONS = `#graphql
+  query ComponentOptions($ids: [ID!]!) {
+    nodes(ids: $ids) {
+      ... on Product {
+        id
+        title
+        options { id name optionValues { name } }
+      }
+    }
+  }`;
+
 interface UserError {
   field?: string[] | null;
   message: string;
+}
+
+interface RawProductOptions {
+  id: string;
+  title: string;
+  options: { id: string; name: string; optionValues: { name: string }[] }[];
+}
+
+interface ComponentInput {
+  productId: string;
+  quantity: number;
+  optionSelections: { componentOptionId: string; name: string; values: string[] }[];
+}
+
+/**
+ * Build the components input for productBundleCreate. Each component must declare
+ * `optionSelections` mapping every option on the component product (even the
+ * default "Title" option of single-variant products) onto the bundle parent.
+ * Parent option names must be unique, so we de-dupe them.
+ */
+async function buildComponentsInput(
+  client: GraphqlClient,
+  bundle: BundleWithComponents,
+): Promise<ComponentInput[]> {
+  const ids = [...new Set(bundle.components.map((c) => c.productId))];
+  const response = await client.graphql(COMPONENT_OPTIONS, { variables: { ids } });
+  const body = (await response.json()) as {
+    data?: { nodes?: (RawProductOptions | null)[] };
+  };
+
+  const byId = new Map<string, RawProductOptions>();
+  for (const node of body.data?.nodes ?? []) {
+    if (node?.id) byId.set(node.id, node);
+  }
+
+  const usedNames = new Set<string>();
+  return bundle.components.map((c) => {
+    const product = byId.get(c.productId);
+    const options = product?.options ?? [];
+
+    const optionSelections = options.map((opt) => {
+      const base =
+        options.length === 1
+          ? (product?.title ?? "Item")
+          : `${product?.title ?? "Item"} · ${opt.name}`;
+      let name = base;
+      let n = 1;
+      while (usedNames.has(name)) {
+        n += 1;
+        name = `${base} ${n}`;
+      }
+      usedNames.add(name);
+      return {
+        componentOptionId: opt.id,
+        name,
+        // Include all the option's values (the whole product).
+        values: opt.optionValues.map((v) => v.name),
+      };
+    });
+
+    return { productId: c.productId, quantity: c.quantity, optionSelections };
+  });
 }
 
 function delay(ms: number): Promise<void> {
@@ -146,15 +219,14 @@ export async function publishBundle(
   await bundleRepo.setSyncState(shopId, bundleId, "SYNCING", null);
 
   try {
-    // 1. Create the managed bundle product (async).
+    // 1. Create the managed bundle product (async). Each component must carry
+    //    optionSelections, so fetch component product options and map them.
+    const components = await buildComponentsInput(client, bundle);
     const createRes = await client.graphql(PRODUCT_BUNDLE_CREATE, {
       variables: {
         input: {
           title: bundle.title,
-          components: bundle.components.map((c) => ({
-            productId: c.productId,
-            quantity: c.quantity,
-          })),
+          components,
         },
       },
     });
